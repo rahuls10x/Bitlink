@@ -1,0 +1,49 @@
+name: Bitlink 
+services:
+  backend-server:
+    build:
+      context: ./backend-server
+      dockerfile: Dockerfile
+    ports:
+      - "4001:4001"
+    environment:
+      - PORT=4001
+      - ORIGIN_URL=http://localhost:5174
+      - AUTH_SERVER_URL=http://localhost:4000
+      - CLIENT_ID=client_*************************
+      - CLIENT_SECRET=secret_************************
+      - REDIRECT_URI=http://localhost:5174/callback
+      - MONGO_DB=mongodb://mongo:27017/
+      - REDIS_DB=redis://redis:6379
+    restart: unless-stopped
+    depends_on:
+      - mongo
+      - redis
+
+  frontend-server:
+    build:
+      context: ./frontend-server
+      dockerfile: Dockerfile
+    ports:
+      - "5174:5174"
+    environment:
+      - VITE_CLIENT_ID=client_*************************
+      - VITE_REDIRECT_URI=http://localhost:5174/callback
+      - VITE_AUTH_URL=http://localhost:4000/authorize
+      - VITE_API_URL=http://localhost:4001
+    restart: unless-stopped
+    depends_on:
+      - backend-server
+  mongo:
+    image: mongo:8
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  redis:
+    image: redis:8
+    ports:
+      - "6380:6379"
+volumes:
+  mongo-data:

@@ -45,5 +45,19 @@ services:
     image: redis:8
     ports:
       - "6380:6379"
+
+  minio:
+    image: cgr.dev/chainguard/minio:latest
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: root
+      MINIO_ROOT_PASSWORD: rootpass
+    volumes:
+      - minio-data:/data
+    restart: unless-stopped
 volumes:
   mongo-data:
+  minio-data:

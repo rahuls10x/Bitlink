@@ -6,6 +6,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import { APP_ROUTES } from "./config/routes";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "./contexts/AuthContext";
+import { SocketProvider } from "./contexts/SocketContext";
 
 function AppRoutes() {
 	return (
@@ -29,13 +30,16 @@ function App() {
 	return (
 		<TooltipProvider>
 			<AuthProvider>
-				<BrowserRouter>
-					<AppRoutes />
-				</BrowserRouter>
+				<SocketProvider>
+					<BrowserRouter>
+						<AppRoutes />
+					</BrowserRouter>
+				</SocketProvider>
 			</AuthProvider>
 		</TooltipProvider>
 	);
 }
 
 export default App;
+
 

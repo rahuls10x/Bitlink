@@ -2,6 +2,7 @@
 import { Server, type Socket } from "socket.io";
 import type { Server as HttpServer } from "http";
 import type SessionService from "../services/SessionService.js";
+import type { AppSocket } from "../types/socket.js";
 
 // ------------- SocketService ---------------
 export default class SocketService {
@@ -43,7 +44,7 @@ export default class SocketService {
 	 * - Attach session data to socket and proceed to next middleware
 	 */
 	private configureMiddleware(): void {
-		this.io.use(async (socket, next) => {
+		this.io.use(async (socket: AppSocket, next) => {
 			try {
 				const cookieHeader = socket.request.headers.cookie;
 

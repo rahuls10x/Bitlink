@@ -51,3 +51,34 @@ export function errorHandling(error: unknown, res: Response): void {
 	});
 }
 
+/**
+ * Standardized socket error handling helper.
+ *
+ * Inorder Flow:
+ * - Check if error is an instance of ApplicationError
+ * - Execute callback with error response object if provided
+ * - Fallback to 500 Internal Server Error structure for unhandled exceptions
+ */
+export function socketErrorHandling(error: unknown, callback?: Function): void {
+	if (typeof callback !== "function") {
+		console.error("[SocketError]:", error);
+		return;
+	}
+
+	if (error instanceof ApplicationError) {
+		callback({
+			success: false,
+			error: error.message,
+		});
+		return;
+	}
+
+	const genericMessage = error instanceof Error ? error.message : "Internal Server Error";
+	console.error("[SocketServerError]:", error);
+
+	callback({
+		success: false,
+		error: genericMessage,
+	});
+}
+

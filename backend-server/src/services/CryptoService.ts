@@ -22,4 +22,24 @@ export default class CryptoService {
     static generateLockId(){
         return "lock_" + crypto.randomBytes(32).toString('hex');
     }
+
+    /**
+     * Generate a random UploadId
+     * 
+     * Inorder Flow: 
+     * - generate and return UploadId (32 chars + prefix)
+     */
+    static generateUploadId(){
+        return "upload_" + crypto.randomBytes(16).toString('hex');
+    }
+
+    /**
+     * Generate a random fileId
+     * 
+     * Inorder Flow: 
+     * - generate and return fileId (64 chars + prefix)
+     */
+    static generateFileId(){
+        return "file_" + crypto.randomBytes(32).toString('hex');
+    }
 }

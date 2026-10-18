@@ -14,6 +14,11 @@ import { MongoClient } from "mongodb";
 import SessionRepository from "./src/repositories/SessionRepository.js";
 import { createClient } from "redis";
 import TokenRepository from "./src/repositories/TokenRepository.js";
+import UploadController from "./src/controllers/UploadController.js";
+import UploadService from "./src/services/UploadService.js";
+import UploadRepository from "./src/repositories/UploadRepository.js";
+import BucketRepository from "./src/repositories/BucketRepository.js";
+import { S3Client } from "@aws-sdk/client-s3";
 
 // ------------- Configuration ---------------
 config({ path: ".env" });
@@ -25,6 +30,7 @@ const authServerUrl = process.env.AUTH_SERVER_URL || "http://localhost:4000";
 const clientId = process.env.CLIENT_ID || "";
 const clientSecret = process.env.CLIENT_SECRET || "";
 const originUrl = process.env.ORIGIN_URL || "http://localhost:5173";
+const bucketName = process.env["S3_BUCKET_NAME"] ?? "bitlink-bucket";
 
 
 app.use(express.json());
@@ -47,14 +53,27 @@ async function boot() {
         await redisConnection.connect();
         console.log("Redis Connected Successfully");
 
+		const s3Client = new S3Client({
+			endpoint: process.env["S3_ENDPOINT"] ?? "http://localhost:9000",
+			region: process.env["S3_REGION"] ?? "us-east-1",
+			credentials: {
+				accessKeyId: process.env["S3_ACCESS_KEY_ID"] ?? "root",
+				secretAccessKey: process.env["S3_SECRET_ACCESS_KEY"] ?? "rootpass",
+			},
+			forcePathStyle: true,
+		});
 		// ------------- Instances ---------------
         const sessionRepository = new SessionRepository(mongoDb);
 		const tokenRepository = new TokenRepository(redisConnection);
+		const uploadRepository = new UploadRepository(mongoDb, redisConnection);
+		const bucketRepository = new BucketRepository(s3Client, bucketName);
 
 		const authService = new AuthService(authServerUrl, clientId, clientSecret, sessionRepository, tokenRepository);
 		const sessionService = new SessionService(sessionRepository, authService);
+		const uploadService = new UploadService(bucketRepository, uploadRepository);
 
 		const authController = new AuthController(authService);
+		const uploadController = new UploadController(uploadService);
 
 		const authMiddleware = new TokenAuthMiddleware(sessionService);
 		const validationMiddleware = new ValidationMiddlewares();

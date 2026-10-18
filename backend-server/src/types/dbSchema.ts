@@ -11,3 +11,16 @@ export interface Session{
     accessTokenExpiry: Date;
     refreshTokenExpiry: Date;
 }
+
+export interface FileUpload{
+    uploadId: string,
+    userId?: string,//temporary bypass
+    fileName: string,
+    mimeType: string,
+    sizeBytes: number,
+    fileId: string,
+    parentId: "null",
+    status: "pending" | "completed",
+    createdAt: Date,
+    expiresAt: Date
+}

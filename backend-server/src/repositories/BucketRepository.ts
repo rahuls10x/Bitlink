@@ -23,10 +23,12 @@ export default class BucketRepository {
      * - Generate presigned URL with specified expiration time
      * - Return the presigned upload URL
      */
-    async getUploadSignedUrl(key: string, expiresIn: number = 3600): Promise<string> {
+    async getUploadSignedUrl(key: string,contentType: string, contentLength: number, expiresIn: number = 3600): Promise<string> {
         const command = new PutObjectCommand({
             Bucket: this.bucketName,
             Key: key,
+            ContentType:contentType,
+            ContentLength:contentLength
         });
 
         const signedUrl = await getSignedUrl(this.s3Client, command, { expiresIn });

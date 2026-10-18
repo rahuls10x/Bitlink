@@ -54,3 +54,16 @@ export interface RefreshRequestBody {
 	refresh_token: string;
 }
 
+export interface RequestUploadPayload {
+	fileName: string;
+	mimeType: string;
+	sizeBytes: number;
+	parentId: string | null;
+}	
+
+export interface StandardResponse{
+	success: boolean;
+	data?: any;
+	error?: string;
+	message?: string;
+}

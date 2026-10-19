@@ -19,6 +19,7 @@ import UploadService from "./src/services/UploadService.js";
 import UploadRepository from "./src/repositories/UploadRepository.js";
 import BucketRepository from "./src/repositories/BucketRepository.js";
 import { S3Client } from "@aws-sdk/client-s3";
+import FileRepository from "./src/repositories/FileRepository.js";
 
 // ------------- Configuration ---------------
 config({ path: ".env" });
@@ -67,10 +68,11 @@ async function boot() {
 		const tokenRepository = new TokenRepository(redisConnection);
 		const uploadRepository = new UploadRepository(mongoDb, redisConnection);
 		const bucketRepository = new BucketRepository(s3Client, bucketName);
+		const fileRepository = new FileRepository(mongoDb);
 
 		const authService = new AuthService(authServerUrl, clientId, clientSecret, sessionRepository, tokenRepository);
 		const sessionService = new SessionService(sessionRepository, authService);
-		const uploadService = new UploadService(bucketRepository, uploadRepository);
+		const uploadService = new UploadService(bucketRepository, uploadRepository, fileRepository);
 
 		const authController = new AuthController(authService);
 		const uploadController = new UploadController(uploadService);

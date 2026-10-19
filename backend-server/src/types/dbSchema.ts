@@ -24,3 +24,14 @@ export interface FileUpload{
     createdAt: Date,
     expiresAt: Date
 }
+
+export interface File{
+    fileId: string,
+    fileName: string,
+    userId?: string, //temporary bypass
+    mimeType: string,
+    sizeBytes: number,
+    parentId: "null",
+    createdAt: Date,
+    modifiedAt: Date
+}

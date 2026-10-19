@@ -1,7 +1,7 @@
 import type UploadService from "../services/UploadService.js";
 import type { StandardResponse } from "../types/index.js";
 import { socketErrorHandling, strictCheck } from "../utils/ApplicationError.js";
-import { requestUploadSchema } from "../utils/ValidationSchema.js";
+import { requestUploadSchema, uploadAcknowlegementSchema, type RequestUploadInput, type UploadAcknowlegementInput } from "../utils/ValidationSchema.js";
 import type { AppSocket } from "../types/socket.js";
 
 export default class UploadController{
@@ -19,7 +19,7 @@ export default class UploadController{
      * - Request upload Information from UploadService
      * - Structure and send response
      */
-    requestingUpload = async (socket: AppSocket, data: any , callback: (response: StandardResponse) => void) => {
+    async requestingUpload(socket: AppSocket, data: RequestUploadInput , callback: (response: StandardResponse) => void){
         try {
             const status = requestUploadSchema.safeParse(data)
             const validatedData = strictCheck(status.data, 400, status.error?.issues[0]?.message || "Invalid request data");
@@ -38,5 +38,50 @@ export default class UploadController{
                 }
             });
         } catch (error) {socketErrorHandling(error, callback)}
+    }
+
+    /**
+     * Handles the request to upload failed
+     * 
+     * Inorder Flow:
+     * - Validate request data
+     * - Update the status and delete the file
+     * - Structure and send response
+     */
+    async uploadFailed(_socket: AppSocket, data: UploadAcknowlegementInput, callback: (response: StandardResponse) => void ){
+        try{
+            const status = uploadAcknowlegementSchema.safeParse(data);
+            const validatedData = strictCheck(status.data, 400, status.error?.issues[0]?.message || "Invalid request data");
+            
+            await this.uploadService.uploadFailed(validatedData.uploadId);
+
+            callback({
+                success: true,
+                message: "Upload has been cancelled successfully",
+            })
+
+        }catch(error){socketErrorHandling(error, callback)}
+    }
+
+    /**
+     * Handles the request to upload Success
+     * 
+     * Inorder Flow:
+     * - Validate request data
+     * - Update the status
+     * - Structure and send response
+     */
+    async uploadSuccess(_socket: AppSocket, data: UploadAcknowlegementInput, callback: (response: StandardResponse) => void ){
+        try{
+            const status = uploadAcknowlegementSchema.safeParse(data);
+            const validatedData = strictCheck(status.data, 400, status.error?.issues[0]?.message || "Invalid request data");
+            
+            await this.uploadService.uploadSuccess(validatedData.uploadId);
+
+            callback({
+                success: true,
+                message: "File has been uploaded successfully",
+            })
+        }catch(error){socketErrorHandling(error, callback)}
     }
 }

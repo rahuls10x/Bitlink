@@ -26,3 +26,13 @@ export const requestUploadSchema = z.object({
 });
 
 export type RequestUploadInput = z.infer<typeof requestUploadSchema>;
+
+
+export const uploadAcknowlegementSchema = z.object({
+	uploadId: z.string()
+		.startsWith("upload_")
+		.length(39, "Upload ID is invalid"),
+
+});
+
+export type UploadAcknowlegementInput = z.infer<typeof uploadAcknowlegementSchema>;

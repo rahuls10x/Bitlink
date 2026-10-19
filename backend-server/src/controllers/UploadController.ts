@@ -2,7 +2,7 @@ import type UploadService from "../services/UploadService.js";
 import type { StandardResponse } from "../types/index.js";
 import { socketErrorHandling, strictCheck } from "../utils/ApplicationError.js";
 import { requestUploadSchema, uploadAcknowlegementSchema, type RequestUploadInput, type UploadAcknowlegementInput } from "../utils/ValidationSchema.js";
-import type { AppSocket } from "../types/socket.js";
+import type { AppSocket } from "../types/socketTypes.js";
 
 export default class UploadController{
     private uploadService:UploadService;

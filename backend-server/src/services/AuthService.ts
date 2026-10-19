@@ -51,6 +51,7 @@ export default class AuthService {
 		const sessionId = CryptoService.generateSessionId();
         const sessionObject:Session = {
             sessionId,
+			userId:tokenData.user_Id,
             isRevoked:false,
 			accessToken:tokenData.access_token,
 			refreshToken:tokenData.refresh_token || "",

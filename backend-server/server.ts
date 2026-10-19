@@ -9,7 +9,6 @@ import SessionService from "./src/services/SessionService.js";
 import AuthController from "./src/controllers/AuthController.js";
 import TokenAuthMiddleware from "./src/middlewares/TokenAuthMiddleware.js";
 import ValidationMiddlewares from "./src/middlewares/ValidationMiddlewares.js";
-import SocketService from "./src/services/SocketService.js";
 import { MongoClient } from "mongodb";
 import SessionRepository from "./src/repositories/SessionRepository.js";
 import { createClient } from "redis";
@@ -20,12 +19,13 @@ import UploadRepository from "./src/repositories/UploadRepository.js";
 import BucketRepository from "./src/repositories/BucketRepository.js";
 import { S3Client } from "@aws-sdk/client-s3";
 import FileRepository from "./src/repositories/FileRepository.js";
+import { Server } from "socket.io";
+import type { AppSocket } from "./src/types/socketTypes.js";
+import SocketRoutes from "./src/routes/Socket.js";
 
 // ------------- Configuration ---------------
 config({ path: ".env" });
-const app = express();
-// Wrap Express in HTTP server to share the TCP listener and port with Socket.io
-const httpServer = http.createServer(app);
+
 const port = process.env.PORT || 4001;
 const authServerUrl = process.env.AUTH_SERVER_URL || "http://localhost:4000";
 const clientId = process.env.CLIENT_ID || "";
@@ -33,6 +33,15 @@ const clientSecret = process.env.CLIENT_SECRET || "";
 const originUrl = process.env.ORIGIN_URL || "http://localhost:5173";
 const bucketName = process.env["S3_BUCKET_NAME"] ?? "bitlink-bucket";
 
+const app = express();
+// Wrap Express in HTTP server to share the TCP listener and port with Socket.io
+const httpServer = http.createServer(app);
+const socketIo = new Server(httpServer, {
+	cors: {
+		origin: originUrl,
+		credentials: true,
+	},
+});
 
 app.use(express.json());
 app.use(cookieParser());
@@ -80,9 +89,12 @@ async function boot() {
 		const authMiddleware = new TokenAuthMiddleware(sessionService);
 		const validationMiddleware = new ValidationMiddlewares();
 
-		// ------------- WebSocket Service Initialization ---------------
-		new SocketService(httpServer, originUrl, sessionService);
+		// ------------- WebsocketEvents --------------
+		socketIo.use((socket, next) => authMiddleware.checkSocketToken(socket, next));
 
+		socketIo.on("connection", (socket: AppSocket) => {
+			SocketRoutes(socket, uploadController);
+		});
 
 		// ------------- Routes ---------------
 		app.get("/health", (_req, res) => {

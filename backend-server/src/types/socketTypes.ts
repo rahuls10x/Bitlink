@@ -4,6 +4,7 @@ export interface SocketData {
 	sessionId?: string;
 	accessToken?: string;
 	userId?: string;
+	accessTokenExpiry?: Date;
 }
 
 export type AppSocket = Socket<any, any, any, SocketData>;

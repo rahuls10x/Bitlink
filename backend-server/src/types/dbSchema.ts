@@ -1,7 +1,7 @@
 export interface Session{
     _id?: string;
     sessionId: string;
-    userId?: string;//temporary bypass
+    userId: string;
     createdAt: Date;
     expiresAt: Date;
     isRevoked: boolean;
@@ -14,7 +14,7 @@ export interface Session{
 
 export interface FileUpload{
     uploadId: string,
-    userId?: string,//temporary bypass
+    userId: string,
     fileName: string,
     mimeType: string,
     sizeBytes: number,
@@ -28,7 +28,7 @@ export interface FileUpload{
 export interface File{
     fileId: string,
     fileName: string,
-    userId?: string, //temporary bypass
+    userId: string,
     mimeType: string,
     sizeBytes: number,
     parentId: "null",

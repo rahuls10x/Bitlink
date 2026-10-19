@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { Link, Outlet, useNavigate } from "react-router-dom";
+import UploadModal from "@/components/UploadModal";
 import {
 	LogOut,
 	Cloud,
@@ -46,6 +48,7 @@ import {
 export default function DashboardLayout() {
 	const { user, logout } = useAuth();
 	const navigate = useNavigate();
+	const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
 	const handleLogout = async () => {
 		await logout();
@@ -53,10 +56,10 @@ export default function DashboardLayout() {
 	};
 
 	/**
-	 * Placeholder function for handling file/folder upload action
+	 * Handles opening the file upload modal
 	 */
 	const handleUploadClick = () => {
-		console.log("Upload button clicked - placeholder for upload logic");
+		setIsUploadModalOpen(true);
 	};
 
 	const userInitials = user?.name
@@ -244,6 +247,14 @@ export default function DashboardLayout() {
 					<Outlet />
 				</main>
 			</SidebarInset>
+
+			<UploadModal
+				isOpen={isUploadModalOpen}
+				onClose={() => setIsUploadModalOpen(false)}
+				onUploadComplete={() => {
+					console.log("Upload completed successfully");
+				}}
+			/>
 		</SidebarProvider>
 	);
 }

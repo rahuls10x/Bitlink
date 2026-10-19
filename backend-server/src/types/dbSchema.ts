@@ -19,7 +19,7 @@ export interface FileUpload{
     mimeType: string,
     sizeBytes: number,
     fileId: string,
-    parentId: "null",
+    parentId: null,
     status: "pending" | "completed",
     createdAt: Date,
     expiresAt: Date
@@ -31,7 +31,7 @@ export interface File{
     userId: string,
     mimeType: string,
     sizeBytes: number,
-    parentId: "null",
+    parentId: null,
     createdAt: Date,
     modifiedAt: Date
 }

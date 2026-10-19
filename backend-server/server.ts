@@ -21,7 +21,9 @@ import { S3Client } from "@aws-sdk/client-s3";
 import FileRepository from "./src/repositories/FileRepository.js";
 import { Server } from "socket.io";
 import type { AppSocket } from "./src/types/socketTypes.js";
-import SocketRoutes from "./src/routes/Socket.js";
+import SocketRoutes from "./src/routes/socket.js";
+import FileService from "./src/services/FileService.js";
+import FileController from "./src/controllers/FileController.js";
 
 // ------------- Configuration ---------------
 config({ path: ".env" });
@@ -82,9 +84,11 @@ async function boot() {
 		const authService = new AuthService(authServerUrl, clientId, clientSecret, sessionRepository, tokenRepository);
 		const sessionService = new SessionService(sessionRepository, authService);
 		const uploadService = new UploadService(bucketRepository, uploadRepository, fileRepository);
+		const fileService = new FileService(fileRepository, bucketRepository);
 
 		const authController = new AuthController(authService);
 		const uploadController = new UploadController(uploadService);
+		const fileController = new FileController(fileService);
 
 		const authMiddleware = new TokenAuthMiddleware(sessionService);
 		const validationMiddleware = new ValidationMiddlewares();
@@ -93,7 +97,7 @@ async function boot() {
 		socketIo.use((socket, next) => authMiddleware.checkSocketToken(socket, next));
 
 		socketIo.on("connection", (socket: AppSocket) => {
-			SocketRoutes(socket, uploadController);
+			SocketRoutes(socket, uploadController, fileController);
 		});
 
 		// ------------- Routes ---------------

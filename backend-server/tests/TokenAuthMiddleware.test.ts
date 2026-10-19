@@ -27,6 +27,7 @@ describe("TokenAuthMiddleware", () => {
 
     const mockActiveSession: Session = {
         sessionId: mockSessionId,
+        userId: "user_1234567890abcdef1234567890abcdef",
         isRevoked: false,
         accessToken: mockAccessToken,
         refreshToken: "rt_1234567890abcdef",

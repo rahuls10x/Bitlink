@@ -39,7 +39,7 @@ export default class UploadService{
             mimeType: data.mimeType,
             sizeBytes: data.sizeBytes,
             fileId: fileId,
-            parentId: "null",
+            parentId: null,
             status: "pending",
             createdAt: new Date(),
             expiresAt: new Date(Date.now() + expirySeconds * 1000)
@@ -102,7 +102,7 @@ export default class UploadService{
             userId: uploadObject.userId!,
             mimeType: uploadObject.mimeType,
             sizeBytes: uploadObject.sizeBytes,
-            parentId: "null",
+            parentId: null,
             createdAt: new Date(),
             modifiedAt: new Date()
         };

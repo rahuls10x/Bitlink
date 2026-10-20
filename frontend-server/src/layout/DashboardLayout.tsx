@@ -1,15 +1,16 @@
-import { useState } from "react";
-import { Link, Outlet, useNavigate } from "react-router-dom";
+import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import UploadModal from "@/components/UploadModal";
 import {
 	LogOut,
 	Cloud,
-	ChevronsUpDown,
 	Upload,
 	FolderGit2,
+	LayoutDashboard,
+	ChevronsUpDown,
 } from "lucide-react";
 import { APP_ROUTES } from "@/config/routes";
 import { useAuth } from "@/contexts/AuthContext";
+import { useFiles } from "@/contexts/FileContext";
 import { APP_NAME } from "@/lib/constants";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -47,19 +48,13 @@ import {
 
 export default function DashboardLayout() {
 	const { user, logout } = useAuth();
+	const { openUploadModal } = useFiles();
 	const navigate = useNavigate();
-	const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+	const location = useLocation();
 
 	const handleLogout = async () => {
 		await logout();
 		navigate(APP_ROUTES.login);
-	};
-
-	/**
-	 * Handles opening the file upload modal
-	 */
-	const handleUploadClick = () => {
-		setIsUploadModalOpen(true);
 	};
 
 	const userInitials = user?.name
@@ -70,6 +65,9 @@ export default function DashboardLayout() {
 				.toUpperCase()
 				.slice(0, 2)
 		: "AU";
+
+	const isFilesPage = location.pathname.startsWith(APP_ROUTES.files);
+	const isDashboardPage = location.pathname === APP_ROUTES.dashboard;
 
 	return (
 		<SidebarProvider>
@@ -102,7 +100,7 @@ export default function DashboardLayout() {
 				<SidebarContent className="p-3 gap-2">
 					<div className="group-data-[collapsible=icon]:hidden px-1 py-2">
 						<button
-							onClick={handleUploadClick}
+							onClick={openUploadModal}
 							className="w-full flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-medium text-sm py-2.5 px-4 rounded-xl border border-slate-200/80 shadow-xs transition-all duration-200 cursor-pointer active:scale-[0.98]"
 						>
 							<Upload className="size-4 text-blue-600" />
@@ -115,7 +113,19 @@ export default function DashboardLayout() {
 							<SidebarMenuItem>
 								<SidebarMenuButton
 									render={<Link to={APP_ROUTES.dashboard} />}
-									isActive
+									isActive={isDashboardPage}
+									tooltip="Dashboard"
+									size="default"
+									className="font-medium group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:justify-center"
+								>
+									<LayoutDashboard className="size-4 text-blue-600 shrink-0" />
+									<span>Dashboard</span>
+								</SidebarMenuButton>
+							</SidebarMenuItem>
+							<SidebarMenuItem>
+								<SidebarMenuButton
+									render={<Link to={APP_ROUTES.files} />}
+									isActive={isFilesPage}
 									tooltip="My Files"
 									size="default"
 									className="font-medium group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:justify-center"
@@ -207,7 +217,9 @@ export default function DashboardLayout() {
 								</BreadcrumbItem>
 								<BreadcrumbSeparator className="text-slate-400" />
 								<BreadcrumbItem>
-									<BreadcrumbPage className="font-semibold text-slate-900">My Files</BreadcrumbPage>
+									<BreadcrumbPage className="font-semibold text-slate-900">
+										{isFilesPage ? "My Files" : "Dashboard"}
+									</BreadcrumbPage>
 								</BreadcrumbItem>
 							</BreadcrumbList>
 						</Breadcrumb>
@@ -248,13 +260,7 @@ export default function DashboardLayout() {
 				</main>
 			</SidebarInset>
 
-			<UploadModal
-				isOpen={isUploadModalOpen}
-				onClose={() => setIsUploadModalOpen(false)}
-				onUploadComplete={() => {
-					console.log("Upload completed successfully");
-				}}
-			/>
+			<UploadModal />
 		</SidebarProvider>
 	);
 }

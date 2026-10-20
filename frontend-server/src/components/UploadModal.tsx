@@ -2,12 +2,12 @@ import React, { useState, useEffect, useRef } from "react";
 import Uppy from "@uppy/core";
 import { Upload, X, CheckCircle2, AlertCircle, Loader2, FileText } from "lucide-react";
 import { useSocket } from "@/contexts/SocketContext";
+import { useFiles } from "@/contexts/FileContext";
 import { Button } from "@/components/ui/button";
 
 interface UploadModalProps {
-	isOpen: boolean;
-	onClose: () => void;
-	onUploadComplete?: () => void;
+	isOpen?: boolean;
+	onClose?: () => void;
 }
 
 interface UploadItem {
@@ -20,7 +20,11 @@ interface UploadItem {
 	error?: string;
 }
 
-export default function UploadModal({ isOpen, onClose, onUploadComplete }: UploadModalProps) {
+export default function UploadModal({ isOpen: propIsOpen, onClose: propOnClose }: UploadModalProps = {}) {
+	const { isUploadModalOpen, closeUploadModal } = useFiles();
+	const isOpen = propIsOpen !== undefined ? propIsOpen : isUploadModalOpen;
+	const onClose = propOnClose || closeUploadModal;
+
 	const { socket, isConnected } = useSocket();
 	const [uploads, setUploads] = useState<UploadItem[]>([]);
 	const uppyRef = useRef<Uppy | null>(null);
@@ -140,10 +144,6 @@ export default function UploadModal({ isOpen, onClose, onUploadComplete }: Uploa
 					)
 				);
 			}
-		}
-
-		if (onUploadComplete) {
-			onUploadComplete();
 		}
 	};
 	return (

@@ -51,11 +51,11 @@ export default class AuthService {
 		const sessionId = CryptoService.generateSessionId();
         const sessionObject:Session = {
             sessionId,
-			userId:tokenData.user_Id,
+			userId:tokenData.user_id,
             isRevoked:false,
 			accessToken:tokenData.access_token,
 			refreshToken:tokenData.refresh_token || "",
-			accessTokenExpiry:new Date(Date.now() + tokenData.expires_in * 1000),
+			accessTokenExpiry:new Date(Date.now() + tokenData.expires_in),
 			refreshTokenExpiry:new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
 			tokenType:tokenData.token_type,
             createdAt:new Date(),
@@ -137,7 +137,7 @@ export default class AuthService {
 				const updateObject = {
 					accessToken: tokenData.access_token,
 					refreshToken: tokenData.refresh_token || "",
-					accessTokenExpiry: new Date(Date.now() + tokenData.expires_in * 1000),
+					accessTokenExpiry: new Date(Date.now() + tokenData.expires_in),
 					refreshTokenExpiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
 					tokenType: tokenData.token_type,
 				};

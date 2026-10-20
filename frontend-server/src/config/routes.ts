@@ -3,12 +3,14 @@ export const APP_ROUTES = {
 	login: "/login",
 	callback: "/callback",
 	dashboard: "/dashboard",
+	files: "/files",
 };
 
 export const API_ROUTES = {
 	token: "/api/auth/token",
-	me:"/api/auth/me",
+	me: "/api/auth/me",
 	exampleProtected: "/api/example/protected",
 };
+
 
 

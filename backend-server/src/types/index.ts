@@ -33,7 +33,7 @@ export interface UserPayload {
 export interface AuthTokens {
 	access_token: string;
 	token_type: "Bearer";
-	user_Id: string;
+	user_id: string;
 	expires_in: number;
 	refresh_token?: string;
 	scopes: string[];

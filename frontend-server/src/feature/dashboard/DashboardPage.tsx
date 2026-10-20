@@ -1,171 +1,185 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useFiles } from "@/contexts/FileContext";
+import { APP_NAME } from "@/lib/constants";
+import { APP_ROUTES } from "@/config/routes";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
 import { 
-	FileText, 
-	Image as ImageIcon, 
-	FileSpreadsheet, 
-	Film, 
-	FileCode, 
-	MoreVertical, 
-	Download, 
-	Edit3, 
-	Trash2, 
-	Share2, 
-	Eye, 
-	File as FileGeneric
+	CheckCircle2, 
+	ShieldCheck, 
+	Key, 
+	Terminal, 
+	Layers, 
+	FolderGit2, 
+	ArrowRight,
+	Play
 } from "lucide-react";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
-interface DriveFile {
-	id: string;
-	name: string;
-	size: string;
-	type: "pdf" | "image" | "document" | "video" | "spreadsheet" | "code" | "other";
-	updatedAt: string;
-}
 
 export default function DashboardPage() {
 	const { user } = useAuth();
+	const { files } = useFiles();
+	const [apiResponse, setApiResponse] = useState<unknown | null>(null);
+	const [isLoadingApi, setIsLoadingApi] = useState<boolean>(false);
+	const [apiError, setApiError] = useState<string | null>(null);
 
-	const [files] = useState<DriveFile[]>([
-		{ id: "1", name: "Q3_Financial_Report.pdf", size: "4.2 MB", type: "pdf", updatedAt: "Oct 15, 2026" },
-		{ id: "2", name: "Brand_Guidelines_2026.png", size: "8.5 MB", type: "image", updatedAt: "Oct 12, 2026" },
-		{ id: "3", name: "Product_Roadmap_Draft.docx", size: "1.1 MB", type: "document", updatedAt: "Oct 10, 2026" },
-		{ id: "4", name: "Marketing_Campaign_Pitch.mp4", size: "124.8 MB", type: "video", updatedAt: "Oct 08, 2026" },
-		{ id: "5", name: "User_Analytics_Q3.xlsx", size: "2.7 MB", type: "spreadsheet", updatedAt: "Oct 05, 2026" },
-		{ id: "6", name: "Architecture_Diagram.png", size: "3.4 MB", type: "image", updatedAt: "Oct 02, 2026" },
-		{ id: "7", name: "api_gateway_config.ts", size: "45 KB", type: "code", updatedAt: "Sep 28, 2026" },
-		{ id: "8", name: "Employee_Handbook_2026.pdf", size: "5.6 MB", type: "pdf", updatedAt: "Sep 25, 2026" },
-	]);
+	const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:4001";
 
-	const handleFileClick = (file: DriveFile) => {
-		console.log("File clicked:", file.name);
-	};
+	const handleTestProtectedApi = async () => {
+		try {
+			setIsLoadingApi(true);
+			setApiError(null);
+			setApiResponse(null);
 
-	const handleDownload = (file: DriveFile, e: React.MouseEvent) => {
-		e.stopPropagation();
-		console.log("Download file:", file.name);
-	};
+			const headers: Record<string, string> = {
+				"Content-Type": "application/json",
+			};
 
-	const handleRename = (file: DriveFile, e: React.MouseEvent) => {
-		e.stopPropagation();
-		console.log("Rename file:", file.name);
-	};
+			const response = await fetch(`${apiUrl}/api/example/protected`, {
+				method: "GET",
+				headers,
+				credentials: "include",
+			});
 
-	const handleShare = (file: DriveFile, e: React.MouseEvent) => {
-		e.stopPropagation();
-		console.log("Share file:", file.name);
-	};
-
-	const handleDelete = (file: DriveFile, e: React.MouseEvent) => {
-		e.stopPropagation();
-		console.log("Delete file:", file.name);
-	};
-
-	const getFileIcon = (type: DriveFile["type"]) => {
-		switch (type) {
-			case "pdf":
-				return <FileText className="size-6 text-rose-500" />;
-			case "image":
-				return <ImageIcon className="size-6 text-blue-500" />;
-			case "document":
-				return <FileText className="size-6 text-blue-600" />;
-			case "spreadsheet":
-				return <FileSpreadsheet className="size-6 text-emerald-600" />;
-			case "video":
-				return <Film className="size-6 text-purple-600" />;
-			case "code":
-				return <FileCode className="size-6 text-amber-600" />;
-			default:
-				return <FileGeneric className="size-6 text-slate-500" />;
+			const data = await response.json();
+			setApiResponse(data);
+		} catch (error) {
+			setApiError(error instanceof Error ? error.message : "Failed to call protected API");
+		} finally {
+			setIsLoadingApi(false);
 		}
 	};
 
 	return (
-		<div className="space-y-6 max-w-7xl mx-auto pb-12">
-			<div className="flex items-center justify-between">
+		<div className="space-y-6 max-w-6xl mx-auto pb-12">
+			{/* Header Greeting */}
+			<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 				<div>
 					<h1 className="text-2xl md:text-3xl font-heading font-bold tracking-tight text-slate-900">
-						My Files
+						Welcome back, {user?.name?.split(" ")[0] || "User"}
 					</h1>
 					<p className="text-sm text-slate-500 mt-1">
-						Manage your cloud documents, images, and media files securely.
+						{APP_NAME} Cloud Storage — OAuth 2.0 PKCE secured microservice dashboard.
 					</p>
 				</div>
+				<Link to={APP_ROUTES.files}>
+					<Button className="rounded-xl gap-2 bg-blue-600 hover:bg-blue-700 text-white cursor-pointer shadow-xs">
+						<FolderGit2 className="size-4" />
+						<span>Open My Files</span>
+						<ArrowRight className="size-4" />
+					</Button>
+				</Link>
 			</div>
 
-			<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-				{files.map((file) => (
-					<div
-						key={file.id}
-						onClick={() => handleFileClick(file)}
-						className="group relative bg-white border border-slate-200/80 rounded-xl p-4 shadow-xs hover:shadow-md hover:border-slate-300 transition-all duration-200 cursor-pointer flex flex-col justify-between h-44"
-					>
-						<div className="flex items-start justify-between">
-							<div className="size-12 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center group-hover:scale-105 transition-transform">
-								{getFileIcon(file.type)}
-							</div>
+			{/* Status & Identity Cards */}
+			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+				<Card className="rounded-2xl border-slate-200/80 shadow-xs">
+					<CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+						<CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+							Storage Files
+						</CardTitle>
+						<FolderGit2 className="size-4 text-blue-600" />
+					</CardHeader>
+					<CardContent>
+						<div className="text-2xl font-bold text-slate-900">{files.length}</div>
+						<p className="text-xs text-slate-500 mt-1">Uploaded in root folder</p>
+					</CardContent>
+				</Card>
 
-							<DropdownMenu>
-								<DropdownMenuTrigger
-									render={
-										<button
-											onClick={(e) => e.stopPropagation()}
-											className="size-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100"
-											aria-label="File actions"
-										/>
-									}
-								>
-									<MoreVertical className="size-4" />
-								</DropdownMenuTrigger>
-								<DropdownMenuContent align="end" className="w-48 rounded-lg">
-									<DropdownMenuItem onClick={() => handleFileClick(file)} className="cursor-pointer">
-										<Eye className="size-4 mr-2 text-slate-500" />
-										<span>Preview</span>
-									</DropdownMenuItem>
-									<DropdownMenuItem onClick={(e) => handleDownload(file, e)} className="cursor-pointer">
-										<Download className="size-4 mr-2 text-slate-500" />
-										<span>Download</span>
-									</DropdownMenuItem>
-									<DropdownMenuItem onClick={(e) => handleShare(file, e)} className="cursor-pointer">
-										<Share2 className="size-4 mr-2 text-slate-500" />
-										<span>Share</span>
-									</DropdownMenuItem>
-									<DropdownMenuItem onClick={(e) => handleRename(file, e)} className="cursor-pointer">
-										<Edit3 className="size-4 mr-2 text-slate-500" />
-										<span>Rename</span>
-									</DropdownMenuItem>
-									<DropdownMenuSeparator />
-									<DropdownMenuItem 
-										onClick={(e) => handleDelete(file, e)} 
-										className="cursor-pointer text-destructive focus:text-destructive"
-									>
-										<Trash2 className="size-4 mr-2" />
-										<span>Delete</span>
-									</DropdownMenuItem>
-								</DropdownMenuContent>
-							</DropdownMenu>
+				<Card className="rounded-2xl border-slate-200/80 shadow-xs">
+					<CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+						<CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+							Auth Status
+						</CardTitle>
+						<ShieldCheck className="size-4 text-emerald-500" />
+					</CardHeader>
+					<CardContent>
+						<div className="text-2xl font-bold flex items-center gap-2 text-emerald-600">
+							<CheckCircle2 className="size-5" /> Active
 						</div>
+						<p className="text-xs text-slate-500 mt-1">PKCE S256 Verified</p>
+					</CardContent>
+				</Card>
 
-						<div className="mt-3">
-							<h3 className="font-medium text-slate-800 text-sm truncate group-hover:text-primary transition-colors" title={file.name}>
-								{file.name}
-							</h3>
-							<div className="flex items-center justify-between text-xs text-slate-400 mt-1.5">
-								<span>{file.size}</span>
-								<span>{file.updatedAt}</span>
-							</div>
+				<Card className="rounded-2xl border-slate-200/80 shadow-xs">
+					<CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+						<CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+							User Account
+						</CardTitle>
+						<Key className="size-4 text-slate-600" />
+					</CardHeader>
+					<CardContent>
+						<div className="text-base font-semibold truncate text-slate-900">
+							{user?.name || "Authenticated User"}
 						</div>
+						<p className="text-xs text-slate-500 mt-1 truncate">{user?.email || "user@example.com"}</p>
+					</CardContent>
+				</Card>
+
+				<Card className="rounded-2xl border-slate-200/80 shadow-xs">
+					<CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+						<CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+							Architecture
+						</CardTitle>
+						<Layers className="size-4 text-slate-600" />
+					</CardHeader>
+					<CardContent>
+						<div className="text-base font-semibold text-slate-900">Microservice Client</div>
+						<p className="text-xs text-slate-500 mt-1">MinIO S3 &bull; WebSockets</p>
+					</CardContent>
+				</Card>
+			</div>
+
+			{/* Interactive Backend Verification Section */}
+			<Card className="rounded-2xl border-slate-200/80 shadow-xs overflow-hidden">
+				<CardHeader className="border-b border-slate-100 bg-slate-50/50">
+					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+						<div>
+							<CardTitle className="text-base font-semibold flex items-center gap-2 text-slate-800">
+								<Terminal className="size-4 text-blue-600" />
+								Test Protected Microservice Route
+							</CardTitle>
+							<CardDescription className="text-xs mt-1 text-slate-500">
+								Verify communication between the frontend client and backend microservice with secure session authentication.
+							</CardDescription>
+						</div>
+						<Button 
+							onClick={handleTestProtectedApi} 
+							disabled={isLoadingApi} 
+							size="sm"
+							className="rounded-xl gap-2 bg-slate-900 hover:bg-slate-800 text-white shrink-0 cursor-pointer"
+						>
+							{isLoadingApi ? <Spinner className="size-3.5" /> : <Play className="size-3.5" />}
+							Send Request
+						</Button>
 					</div>
-				))}
-			</div>
-			{false && user && null}
+				</CardHeader>
+				<CardContent className="p-6">
+					<div className="bg-slate-950 p-4 rounded-xl font-mono text-xs text-slate-300 space-y-2">
+						<div className="text-slate-500 font-semibold">Endpoint: GET /api/example/protected</div>
+						{isLoadingApi && (
+							<div className="flex items-center gap-2 text-slate-400 py-3">
+								<Spinner className="size-4" /> Requesting data from server...
+							</div>
+						)}
+						{apiError && (
+							<div className="text-rose-400 font-sans py-2">
+								<strong>Error:</strong> {apiError}
+							</div>
+						)}
+						{apiResponse !== null && (
+							<pre className="text-xs overflow-x-auto text-emerald-400 pt-2 border-t border-slate-800">
+								{JSON.stringify(apiResponse, null, 2)}
+							</pre>
+						)}
+						{!isLoadingApi && !apiError && !apiResponse && (
+							<div className="text-slate-500 italic py-2">Click "Send Request" to test live API communication.</div>
+						)}
+					</div>
+				</CardContent>
+			</Card>
 		</div>
 	);
 }

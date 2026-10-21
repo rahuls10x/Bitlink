@@ -66,15 +66,17 @@ export default class FileController{
      * Handles the request to rename file
      * 
      * Inorder Flow:
-     * - Validate request data and userId
+     * - Validate request data and userId, roomId
      * - Rename the file
      * - Structure and send response
+     * - Fire a fileUpdated event to all instances of user except the sender
      */
     async renameFile(socket:AppSocket, data:RenameFileInput, callback: (response: StandardResponse) => void){
         try {
             const status = renameFileSchema.safeParse(data);
             const validatedData = strictCheck(status.data, 400, status.error?.issues[0]?.message || "Invalid request data");
             const userId = strictCheck(socket.data.userId, 500, "User Id not found in connection");
+            const roomId = strictCheck(socket.data.roomId, 500, "Room Id not found in connection");
 
             await this.fileService.renameFile(validatedData, userId);
 
@@ -82,6 +84,12 @@ export default class FileController{
                 success: true,
                 message: "File has been renamed successfully",
             });
+
+            socket.to(roomId).emit("fileUpdated", {
+                operation: "fileRenamed",
+                data: validatedData
+            });
+
         } catch (error) {socketErrorHandling(error, callback)}
     }
 
@@ -89,21 +97,28 @@ export default class FileController{
      * Handles the request to delete file
      * 
      * Inorder Flow:
-     * - Validate request data and userId
+     * - Validate request data and userId, roomId
      * - Delete the file
      * - Structure and send response
+     * - Fire a fileUpdated event to all instances of user except the sender
      */
     async deleteFile(socket:AppSocket, data:DeleteFileInput, callback: (response: StandardResponse) => void){
         try{
             const status = deleteFileSchema.safeParse(data);
             const validatedData = strictCheck(status.data, 400, status.error?.issues[0]?.message || "Invalid request data");
             const userId = strictCheck(socket.data.userId, 500, "User Id not found in connection");
+            const roomId = strictCheck(socket.data.roomId, 500, "Room Id not found in connection");
 
             await this.fileService.deleteFile(validatedData, userId);
 
             callback({
                 success: true,
                 message: "File has been deleted successfully"
+            });
+
+            socket.to(roomId).emit("fileUpdated", {
+                operation: "fileDeleted",
+                data: validatedData
             });
         }catch (error){
             socketErrorHandling(error, callback);

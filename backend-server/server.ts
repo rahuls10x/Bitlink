@@ -21,7 +21,7 @@ import { S3Client } from "@aws-sdk/client-s3";
 import FileRepository from "./src/repositories/FileRepository.js";
 import { Server } from "socket.io";
 import type { AppSocket } from "./src/types/socketTypes.js";
-import SocketRoutes from "./src/routes/socket.js";
+import { SocketRoutes , JoinSocketRooms} from "./src/routes/socket.js";
 import FileService from "./src/services/FileService.js";
 import FileController from "./src/controllers/FileController.js";
 
@@ -97,6 +97,9 @@ async function boot() {
 		socketIo.use((socket, next) => authMiddleware.checkSocketToken(socket, next));
 
 		socketIo.on("connection", (socket: AppSocket) => {
+			console.log(`[WebSocket] Client connected: ${socket.id} (Session: ${socket.data.sessionId}) (User: ${socket.data.userId})`);
+
+			JoinSocketRooms(socket);
 			SocketRoutes(socket, uploadController, fileController);
 		});
 

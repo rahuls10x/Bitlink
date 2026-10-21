@@ -57,3 +57,8 @@ export interface DeleteFileInput {
 	fileId: string;
 }
 
+export type FileUpdatedEvent =
+	| { operation: "fileAdded"; data: ServerFile }
+	| { operation: "fileRenamed"; data: RenameFileInput }
+	| { operation: "fileDeleted"; data: DeleteFileInput };
+

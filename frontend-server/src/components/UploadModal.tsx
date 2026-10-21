@@ -21,11 +21,11 @@ interface UploadItem {
 }
 
 export default function UploadModal({ isOpen: propIsOpen, onClose: propOnClose }: UploadModalProps = {}) {
-	const { isUploadModalOpen, closeUploadModal } = useFiles();
+	const { isUploadModalOpen, closeUploadModal, uploadFile } = useFiles();
 	const isOpen = propIsOpen !== undefined ? propIsOpen : isUploadModalOpen;
 	const onClose = propOnClose || closeUploadModal;
 
-	const { socket, isConnected } = useSocket();
+	const { isConnected } = useSocket();
 	const [uploads, setUploads] = useState<UploadItem[]>([]);
 	const uppyRef = useRef<Uppy | null>(null);
 
@@ -52,7 +52,7 @@ export default function UploadModal({ isOpen: propIsOpen, onClose: propOnClose }
 
 	const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
 		const files = e.target.files;
-		if (!files || files.length === 0 || !socket || !isConnected) return;
+		if (!files || files.length === 0 || !isConnected) return;
 
 		const newUploads: UploadItem[] = Array.from(files).map((file) => ({
 			id: Math.random().toString(36).substring(2, 9),
@@ -74,66 +74,17 @@ export default function UploadModal({ isOpen: propIsOpen, onClose: propOnClose }
 					prev.map((item) => (item.id === uploadItem.id ? { ...item, status: "uploading" } : item))
 				);
 
-				const response: any = await new Promise((resolve) => {
-					socket.emit(
-						"requestingToUpload",
-						{
-							fileName: file.name,
-							mimeType: file.type || "application/octet-stream",
-							sizeBytes: file.size,
-							parentId: null,
-						},
-						(res: any) => resolve(res)
+				await uploadFile(file, (percent) => {
+					setUploads((prev) =>
+						prev.map((item) => (item.id === uploadItem.id ? { ...item, progress: percent } : item))
 					);
 				});
 
-				if (!response || !response.success || !response.data) {
-					throw new Error(response?.error || "Failed to obtain upload authorization");
-				}
-
-				const { uploadId, signedUrl } = response.data;
-
-				await new Promise<void>((resolve, reject) => {
-					const xhr = new XMLHttpRequest();
-					xhr.open("PUT", signedUrl, true);
-					xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
-
-					xhr.upload.onprogress = (event) => {
-						if (event.lengthComputable) {
-							const percent = Math.round((event.loaded / event.total) * 100);
-							setUploads((prev) =>
-								prev.map((item) => (item.id === uploadItem.id ? { ...item, progress: percent } : item))
-							);
-						}
-					};
-
-					xhr.onload = async () => {
-						if (xhr.status >= 200 && xhr.status < 300) {
-							socket.emit("uploadSuccess", { uploadId }, (ackRes: any) => {
-								if (ackRes && ackRes.success) {
-									setUploads((prev) =>
-										prev.map((item) =>
-											item.id === uploadItem.id ? { ...item, status: "success", progress: 100 } : item
-										)
-									);
-									resolve();
-								} else {
-									reject(new Error(ackRes?.error || "Failed to acknowledge upload success"));
-								}
-							});
-						} else {
-							socket.emit("uploadFailed", { uploadId }, () => {});
-							reject(new Error(`S3 Upload failed with status ${xhr.status}`));
-						}
-					};
-
-					xhr.onerror = () => {
-						socket.emit("uploadFailed", { uploadId }, () => {});
-						reject(new Error("Network error during file upload"));
-					};
-
-					xhr.send(file);
-				});
+				setUploads((prev) =>
+					prev.map((item) =>
+						item.id === uploadItem.id ? { ...item, status: "success", progress: 100 } : item
+					)
+				);
 			} catch (error: any) {
 				console.error("Upload error:", error);
 				setUploads((prev) =>

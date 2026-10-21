@@ -3,7 +3,8 @@ import { useSocket } from "./SocketContext";
 import type { 
 	ServerFile, 
 	SocketStandardResponse, 
-	DownloadResponseData 
+	DownloadResponseData,
+	FileUpdatedEvent
 } from "@/types";
 
 export interface FileContextType {
@@ -20,6 +21,7 @@ export interface FileContextType {
 	renameFile: (fileId: string, newFileName: string) => Promise<boolean>;
 	deleteFile: (fileId: string) => Promise<boolean>;
 	uploadFile: (file: File, onProgress?: (percent: number) => void) => Promise<void>;
+	addFile: (file: ServerFile) => void;
 }
 
 const FileContext = createContext<FileContextType | undefined>(undefined);
@@ -39,6 +41,15 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
 
 	const closeUploadModal = useCallback(() => {
 		setIsUploadModalOpen(false);
+	}, []);
+
+	const addFile = useCallback((newFile: ServerFile) => {
+		setFiles((prev) => {
+			if (prev.some((f) => f.fileId === newFile.fileId)) {
+				return prev.map((f) => (f.fileId === newFile.fileId ? newFile : f));
+			}
+			return [newFile, ...prev];
+		});
 	}, []);
 
 	/**
@@ -76,6 +87,48 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
 			setIsLoading(true);
 		}
 	}, [isConnected, socket, fetchFiles]);
+
+	// Handle real-time concurrent file updates from server (fired for everyone except sender)
+	useEffect(() => {
+		if (!socket || !isConnected) return;
+
+		const handleFileUpdated = (event: FileUpdatedEvent) => {
+			if (!event || !event.operation) return;
+
+			switch (event.operation) {
+				case "fileAdded": {
+					if (event.data) {
+						addFile(event.data);
+					}
+					break;
+				}
+				case "fileRenamed": {
+					const { fileId, newFileName } = event.data;
+					setFiles((prev) =>
+						prev.map((f) =>
+							f.fileId === fileId
+								? { ...f, fileName: newFileName, modifiedAt: new Date().toISOString() }
+								: f
+						)
+					);
+					break;
+				}
+				case "fileDeleted": {
+					const { fileId } = event.data;
+					setFiles((prev) => prev.filter((f) => f.fileId !== fileId));
+					break;
+				}
+				default:
+					break;
+			}
+		};
+
+		socket.on("fileUpdated", handleFileUpdated);
+
+		return () => {
+			socket.off("fileUpdated", handleFileUpdated);
+		};
+	}, [socket, isConnected, addFile]);
 
 	/**
 	 * Requests download signed URL and triggers native browser download
@@ -153,8 +206,7 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
 	}, [socket, isConnected]);
 
 	/**
-	 * Emits "renameFile" WebSocket event
-	 * Note: Does NOT update the actual files list per architecture requirements
+	 * Emits "renameFile" WebSocket event and updates the file name locally on acknowledgment
 	 */
 	const renameFile = useCallback(async (fileId: string, newFileName: string): Promise<boolean> => {
 		if (!socket || !isConnected) throw new Error("WebSocket connection is not active");
@@ -169,12 +221,20 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
 			throw new Error(response?.error || "Failed to rename file");
 		}
 
+		// Update file locally for sender upon positive ack
+		setFiles((prev) =>
+			prev.map((f) =>
+				f.fileId === fileId
+					? { ...f, fileName: newFileName, modifiedAt: new Date().toISOString() }
+					: f
+			)
+		);
+
 		return true;
 	}, [socket, isConnected]);
 
 	/**
-	 * Emits "deleteFile" WebSocket event
-	 * Note: Does NOT update the actual files list per architecture requirements
+	 * Emits "deleteFile" WebSocket event and removes the file locally on acknowledgment
 	 */
 	const deleteFile = useCallback(async (fileId: string): Promise<boolean> => {
 		if (!socket || !isConnected) throw new Error("WebSocket connection is not active");
@@ -189,12 +249,15 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
 			throw new Error(response?.error || "Failed to delete file");
 		}
 
+		// Remove file locally for sender upon positive ack
+		setFiles((prev) => prev.filter((f) => f.fileId !== fileId));
+
 		return true;
 	}, [socket, isConnected]);
 
 	/**
 	 * Coordinates file upload via WebSocket authorization, direct S3 PUT with progress, and server acknowledgment.
-	 * Note: Does NOT update the actual files list per architecture requirements.
+	 * Adds the newly created file locally upon positive ack.
 	 */
 	const uploadFile = useCallback(async (file: File, onProgress?: (percent: number) => void): Promise<void> => {
 		if (!socket || !isConnected) {
@@ -234,8 +297,11 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
 
 			xhr.onload = async () => {
 				if (xhr.status >= 200 && xhr.status < 300) {
-					socket.emit("uploadSuccess", { uploadId }, (ackRes: any) => {
+					socket.emit("uploadSuccess", { uploadId }, (ackRes: SocketStandardResponse<ServerFile>) => {
 						if (ackRes && ackRes.success) {
+							if (ackRes.data) {
+								addFile(ackRes.data);
+							}
 							if (onProgress) onProgress(100);
 							resolve();
 						} else {
@@ -255,7 +321,7 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
 
 			xhr.send(file);
 		});
-	}, [socket, isConnected]);
+	}, [socket, isConnected, addFile]);
 
 	const value = useMemo(
 		() => ({
@@ -272,6 +338,7 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
 			renameFile,
 			deleteFile,
 			uploadFile,
+			addFile,
 		}),
 		[
 			files,
@@ -287,6 +354,7 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
 			renameFile,
 			deleteFile,
 			uploadFile,
+			addFile,
 		]
 	);
 

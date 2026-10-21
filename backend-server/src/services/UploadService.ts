@@ -85,7 +85,7 @@ export default class UploadService{
      * - Check file exists in bucket
      * - Create file object and store in db
      */
-    async uploadSuccess(uploadId: string):Promise<void>{
+    async uploadSuccess(uploadId: string):Promise<File>{
         let uploadObject = await this.uploadRepository.decacheAndRetrieveFileUploadToken(uploadId);
 
         if(!uploadObject){
@@ -108,6 +108,7 @@ export default class UploadService{
         };
         strictCheck(await this.fileRepository.createNewFile(fileObject), 500, "Failed to create file");
         
+        return fileObject;
     }
 
 }

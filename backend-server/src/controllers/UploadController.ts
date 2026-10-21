@@ -67,21 +67,29 @@ export default class UploadController{
      * Handles the request to upload Success
      * 
      * Inorder Flow:
-     * - Validate request data
-     * - Update the status
+     * - Validate request data, roomId
+     * - Update the status and fetch the file
      * - Structure and send response
+     * - Fire a fileUpdated event to all instances of user except the sender
      */
-    async uploadSuccess(_socket: AppSocket, data: UploadAcknowlegementInput, callback: (response: StandardResponse) => void ){
+    async uploadSuccess(socket: AppSocket, data: UploadAcknowlegementInput, callback: (response: StandardResponse) => void ){
         try{
             const status = uploadAcknowlegementSchema.safeParse(data);
             const validatedData = strictCheck(status.data, 400, status.error?.issues[0]?.message || "Invalid request data");
+            const roomId = strictCheck(socket.data.roomId, 500, "Room Id not found in connection"); 
             
-            await this.uploadService.uploadSuccess(validatedData.uploadId);
+            const file = await this.uploadService.uploadSuccess(validatedData.uploadId);
 
             callback({
                 success: true,
                 message: "File has been uploaded successfully",
-            })
+                data: file
+            });
+
+            socket.to(roomId).emit("fileUpdated", {
+                operation: "fileAdded",
+                data: file
+            });
         }catch(error){socketErrorHandling(error, callback)}
     }
 }

@@ -4,6 +4,7 @@ export interface SocketData {
 	sessionId?: string;
 	accessToken?: string;
 	userId?: string;
+	roomId?: string;
 	accessTokenExpiry?: Date;
 }
 

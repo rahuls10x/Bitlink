@@ -4,9 +4,15 @@ import type { StandardResponse } from "../types/index.js";
 import type { AppSocket } from "../types/socketTypes.js";
 import type { DeleteFileInput, RenameFileInput, RequestDownloadInput, RequestUploadInput, UploadAcknowlegementInput, ViewFilesInput } from "../utils/ValidationSchema.js";
 
-export default function SocketRoutes(socket: AppSocket, uploadController: UploadController, fileController: FileController) {
-    console.log(`[WebSocket] Client connected: ${socket.id} (Session: ${socket.data.sessionId}) (User: ${socket.data.userId})`);
+export function JoinSocketRooms(socket: AppSocket) {
+    const roomId = `room_${socket.data.userId}`;
+    socket.data.roomId = roomId;
 
+    socket.join(roomId);
+}
+
+export function SocketRoutes(socket: AppSocket, uploadController: UploadController, fileController: FileController) {
+    
     socket.on("requestingToUpload", (data: RequestUploadInput, callback:(response: StandardResponse) => void) => {
         uploadController.requestingUpload(socket, data, callback);
     });

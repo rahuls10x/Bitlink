@@ -1,32 +1,54 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 import { useAuth } from "./AuthContext";
 
 interface SocketContextType {
 	socket: Socket | null;
 	isConnected: boolean;
+	disconnect: () => void;
 }
 
-const SocketContext = createContext<SocketContextType>({ socket: null, isConnected: false });
+const SocketContext = createContext<SocketContextType>({
+	socket: null,
+	isConnected: false,
+	disconnect: () => {},
+});
 
 export function SocketProvider({ children }: { children: React.ReactNode }) {
-	const { isAuthenticated } = useAuth();
+	const { isAuthenticated, registerBeforeLogout } = useAuth();
 	const [socket, setSocket] = useState<Socket | null>(null);
 	const [isConnected, setIsConnected] = useState(false);
+	const socketRef = useRef<Socket | null>(null);
+
+	const disconnect = useCallback(() => {
+		if (socketRef.current) {
+			console.log("[WebSocket] Disconnecting websocket connection");
+			socketRef.current.disconnect();
+			socketRef.current = null;
+			setSocket(null);
+			setIsConnected(false);
+		}
+	}, []);
+
+	// Guarantee WebSocket disconnects prior to backend session revocation
+	useEffect(() => {
+		const unregister = registerBeforeLogout?.(() => {
+			disconnect();
+		});
+		return unregister;
+	}, [registerBeforeLogout, disconnect]);
 
 	useEffect(() => {
 		if (!isAuthenticated) {
-			if (socket) {
-				socket.disconnect();
-				setSocket(null);
-				setIsConnected(false);
-			}
+			disconnect();
 			return;
 		}
 
 		const socketInstance = io(import.meta.env.VITE_API_URL || "http://localhost:4001", {
 			withCredentials: true,
 		});
+
+		socketRef.current = socketInstance;
 
 		socketInstance.on("connect", () => {
 			setIsConnected(true);
@@ -42,11 +64,14 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
 		return () => {
 			socketInstance.disconnect();
+			if (socketRef.current === socketInstance) {
+				socketRef.current = null;
+			}
 		};
-	}, [isAuthenticated]);
+	}, [isAuthenticated, disconnect]);
 
 	return (
-		<SocketContext.Provider value={{ socket, isConnected }}>
+		<SocketContext.Provider value={{ socket, isConnected, disconnect }}>
 			{children}
 		</SocketContext.Provider>
 	);

@@ -10,6 +10,7 @@ services:
       - PORT=4001
       - ORIGIN_URL=http://localhost:5174
       - AUTH_SERVER_URL=http://localhost:4000
+      - RESOURCE_SERVER_URL=http://localhost:5000
       - CLIENT_ID=client_*************************
       - CLIENT_SECRET=secret_************************
       - REDIRECT_URI=http://localhost:5174/callback

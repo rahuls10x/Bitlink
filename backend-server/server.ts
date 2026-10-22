@@ -30,6 +30,7 @@ config({ path: ".env" });
 
 const port = process.env.PORT || 4001;
 const authServerUrl = process.env.AUTH_SERVER_URL || "http://localhost:4000";
+const resourceServerUrl = process.env.RESOURCE_SERVER_URL || "http://localhost:5000";
 const clientId = process.env.CLIENT_ID || "";
 const clientSecret = process.env.CLIENT_SECRET || "";
 const originUrl = process.env.ORIGIN_URL || "http://localhost:5173";
@@ -81,7 +82,7 @@ async function boot() {
 		const bucketRepository = new BucketRepository(s3Client, bucketName);
 		const fileRepository = new FileRepository(mongoDb);
 
-		const authService = new AuthService(authServerUrl, clientId, clientSecret, sessionRepository, tokenRepository);
+		const authService = new AuthService(authServerUrl, resourceServerUrl, clientId, clientSecret, sessionRepository, tokenRepository);
 		const sessionService = new SessionService(sessionRepository, authService);
 		const uploadService = new UploadService(bucketRepository, uploadRepository, fileRepository);
 		const fileService = new FileService(fileRepository, bucketRepository);
@@ -115,6 +116,7 @@ async function boot() {
 		// Auth Routes
 		app.post("/api/auth/token", validationMiddleware.validateTokenize, authController.exchangeToken);
 		app.get("/api/auth/me", authMiddleware.checkToken, authController.me);
+		app.post("/api/auth/logout", authController.logout);
 
 		// Sample Protected Route
 		app.get("/api/example/protected", authMiddleware.checkToken, (req, res) => {

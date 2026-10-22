@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import UploadModal from "@/components/UploadModal";
 import {
@@ -10,10 +11,11 @@ import {
 } from "lucide-react";
 import { APP_ROUTES } from "@/config/routes";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSocket } from "@/contexts/SocketContext";
 import { useFiles } from "@/contexts/FileContext";
 import { APP_NAME } from "@/lib/constants";
 import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -25,6 +27,7 @@ import {
 import {
 	DropdownMenu,
 	DropdownMenuContent,
+	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
@@ -48,13 +51,25 @@ import {
 
 export default function DashboardLayout() {
 	const { user, logout } = useAuth();
+	const { disconnect } = useSocket();
 	const { openUploadModal } = useFiles();
 	const navigate = useNavigate();
 	const location = useLocation();
+	const [isLoggingOut, setIsLoggingOut] = useState(false);
 
 	const handleLogout = async () => {
-		await logout();
-		navigate(APP_ROUTES.login);
+		if (isLoggingOut) return;
+		try {
+			setIsLoggingOut(true);
+			disconnect();
+			await logout();
+			navigate(APP_ROUTES.login);
+		} catch (error) {
+			console.error("[Dashboard] Logout failed:", error);
+			navigate(APP_ROUTES.login);
+		} finally {
+			setIsLoggingOut(false);
+		}
 	};
 
 	const userInitials = user?.name
@@ -153,6 +168,7 @@ export default function DashboardLayout() {
 									}
 								>
 									<Avatar className="size-8 rounded-lg shrink-0">
+										{user?.avatar && <AvatarImage src={user.avatar} alt={user?.name || "User"} />}
 										<AvatarFallback className="rounded-lg bg-blue-100 text-blue-700 text-xs font-semibold">
 											{userInitials}
 										</AvatarFallback>
@@ -171,25 +187,28 @@ export default function DashboardLayout() {
 									align="start"
 									sideOffset={4}
 								>
-									<DropdownMenuLabel className="p-0 font-normal">
-										<div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-											<Avatar className="size-8 rounded-lg">
-												<AvatarFallback className="rounded-lg bg-blue-100 text-blue-700 text-xs font-semibold">
-													{userInitials}
-												</AvatarFallback>
-											</Avatar>
-											<div className="grid flex-1 text-left text-sm leading-tight">
-												<span className="truncate font-semibold text-slate-800">{user?.name || "Authenticated User"}</span>
-												<span className="truncate text-xs text-slate-500">
-													{user?.email || "user@example.com"}
-												</span>
+									<DropdownMenuGroup>
+										<DropdownMenuLabel className="p-0 font-normal">
+											<div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+												<Avatar className="size-8 rounded-lg">
+													{user?.avatar && <AvatarImage src={user.avatar} alt={user?.name || "User"} />}
+													<AvatarFallback className="rounded-lg bg-blue-100 text-blue-700 text-xs font-semibold">
+														{userInitials}
+													</AvatarFallback>
+												</Avatar>
+												<div className="grid flex-1 text-left text-sm leading-tight">
+													<span className="truncate font-semibold text-slate-800">{user?.name || "Authenticated User"}</span>
+													<span className="truncate text-xs text-slate-500">
+														{user?.email || "user@example.com"}
+													</span>
+												</div>
 											</div>
-										</div>
-									</DropdownMenuLabel>
+										</DropdownMenuLabel>
+									</DropdownMenuGroup>
 									<DropdownMenuSeparator />
-									<DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:text-destructive">
+									<DropdownMenuItem onClick={handleLogout} disabled={isLoggingOut} className="cursor-pointer text-destructive focus:text-destructive">
 										<LogOut className="size-4 mr-2" />
-										<span>Sign Out</span>
+										<span>{isLoggingOut ? "Signing out..." : "Sign Out"}</span>
 									</DropdownMenuItem>
 								</DropdownMenuContent>
 							</DropdownMenu>
@@ -234,20 +253,23 @@ export default function DashboardLayout() {
 								}
 							>
 								<Avatar className="size-9 rounded-full border border-slate-200">
+									{user?.avatar && <AvatarImage src={user.avatar} alt={user?.name || "User"} />}
 									<AvatarFallback className="rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
 										{userInitials}
 									</AvatarFallback>
 								</Avatar>
 							</DropdownMenuTrigger>
 							<DropdownMenuContent align="end" className="w-56 rounded-xl shadow-lg border border-slate-200">
-								<DropdownMenuLabel className="font-normal p-3">
-									<p className="font-semibold text-slate-800 text-sm truncate">{user?.name || "Authenticated User"}</p>
-									<p className="text-xs text-slate-500 truncate mt-0.5">{user?.email || "user@example.com"}</p>
-								</DropdownMenuLabel>
+								<DropdownMenuGroup>
+									<DropdownMenuLabel className="font-normal p-3">
+										<p className="font-semibold text-slate-800 text-sm truncate">{user?.name || "Authenticated User"}</p>
+										<p className="text-xs text-slate-500 truncate mt-0.5">{user?.email || "user@example.com"}</p>
+									</DropdownMenuLabel>
+								</DropdownMenuGroup>
 								<DropdownMenuSeparator />
-								<DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:text-destructive py-2.5">
+								<DropdownMenuItem onClick={handleLogout} disabled={isLoggingOut} className="cursor-pointer text-destructive focus:text-destructive py-2.5">
 									<LogOut className="size-4 mr-2" />
-									<span>Sign Out</span>
+									<span>{isLoggingOut ? "Signing out..." : "Sign Out"}</span>
 								</DropdownMenuItem>
 							</DropdownMenuContent>
 						</DropdownMenu>

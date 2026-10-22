@@ -1,6 +1,6 @@
 // ------------- Imports ---------------
 import { strictCheck } from "../utils/ApplicationError.js";
-import type { AuthTokens } from "../types/index.js";
+import type { AuthTokens, UserResource } from "../types/index.js";
 import CryptoService from "./CryptoService.js";
 import type { Session } from "../types/dbSchema.js";
 import type SessionRepository from "../repositories/SessionRepository.js";
@@ -9,17 +9,42 @@ import type TokenRepository from "../repositories/TokenRepository.js";
 // ------------- AuthService ---------------
 export default class AuthService {
 	private authServerUrl: string;
+	private resourceServerUrl: string;
 	private clientId: string;
 	private clientSecret: string;
 	private sessionRepository: SessionRepository;
 	private tokenRepository: TokenRepository;
 
-	constructor(authServerUrl: string, clientId: string, clientSecret: string, sessionRepository: SessionRepository, tokenRepository:TokenRepository) {
+	constructor(authServerUrl: string, resourceServerUrl: string, clientId: string, clientSecret: string, sessionRepository: SessionRepository, tokenRepository:TokenRepository) {
 		this.authServerUrl = authServerUrl || "http://localhost:4000";
+		this.resourceServerUrl = resourceServerUrl || "http://localhost:5000";
 		this.clientId = clientId || "";
 		this.clientSecret = clientSecret ||  "";
 		this.sessionRepository = sessionRepository;
 		this.tokenRepository = tokenRepository;
+	}
+
+	/**
+	 * Fetches the User Resource from Resource Server
+	 * 
+	 * Inorder Flow:
+	 * - Send GET request to /resource endpoint of Resource Server
+	 * - Parse and assert successful response payload
+	 * - Return User Resource
+	 */
+	public async fetchUserResource(accessToken:string): Promise<UserResource>{
+		const response = await fetch(`${this.resourceServerUrl}/resource`, {
+			method: "GET",
+			headers: { 
+				"Content-Type": "application/json",
+				"Authorization": `Bearer ${accessToken}`},
+		});
+
+		const result = (await response.json()) as { success: boolean; data?: UserResource; error?: string; message?: string };
+		strictCheck(response.ok || result.success || result.data, response.status || 400, result.error || "Failed to exchange authorization code");
+		const userResource = strictCheck(result.data, 500, "User resource data is missing");
+
+		return userResource;
 	}
 
 	/**
@@ -30,9 +55,10 @@ export default class AuthService {
 	 * - Parse and assert successful response payload
 	 * - Create Session Payload
 	 * - Store Session Payload
-	 * - Return Session Id
+	 * - Fetch User Resource
+	 * - Return Session Id + User Resource
 	 */
-	public async exchangeCode(code: string, codeVerifier: string): Promise<string> {
+	public async exchangeCode(code: string, codeVerifier: string): Promise<{sessionId:string} & UserResource> {
 		const response = await fetch(`${this.authServerUrl}/tokenize`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
@@ -64,7 +90,9 @@ export default class AuthService {
 
         strictCheck(await this.sessionRepository.createSession(sessionObject), 500, "Internal Server Error");
 
-        return sessionId;
+		const userResource = await this.fetchUserResource(sessionObject.accessToken);
+
+        return {sessionId, ...userResource};
 	}
 
 	/**
@@ -149,5 +177,17 @@ export default class AuthService {
 		}
 
 		return await this.waitForNewToken(sessionId, lockKey);
+	}
+
+	/**
+	 * logout an existing session
+	 * 
+	 * Inorder Flow:
+	 * - revoke the session in db
+	 */
+	public async logout(sessionId: string) {
+
+		strictCheck(await this.sessionRepository.revokeSessionById(sessionId), 500, "Failed to revoke session");
+
 	}
 }

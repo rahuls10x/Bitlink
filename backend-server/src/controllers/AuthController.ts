@@ -16,9 +16,9 @@ export default class AuthController {
 	 *
 	 * Inorder Flow:
 	 * - Retrieve code and code_verifier from request body
-	 * - Call AuthService to exchange code with Truth Auth Server
+	 * - get exchange code and user resource
 	 * - Set HTTP-only auth cookies for security
-	 * - Return tokens and success response
+	 * - Structure success response with User resources
 	 */
 	exchangeToken: RequestHandler = async (req, res) => {
 		try {
@@ -26,9 +26,9 @@ export default class AuthController {
 			const validCode = strictCheck(code, 400, "Authorization code is required");
 			const validVerifier = strictCheck(code_verifier, 400, "Code verifier is required");
 
-			const sessionId = await this.authService.exchangeCode(validCode, validVerifier);
+			const userData = await this.authService.exchangeCode(validCode, validVerifier);
 
-			res.cookie("sessionToken", sessionId, {
+			res.cookie("sessionToken", userData.sessionId, {
 				httpOnly: true,
 				secure: process.env["NODE_ENV"] === "production",
 				sameSite: "lax",
@@ -38,6 +38,10 @@ export default class AuthController {
 			res.status(200).json({
 				success: true,
 				message: "Authentication successful",
+				data: {
+					name: userData.name,
+					email: userData.email,
+				}
 			});
 		} catch (error) {
 			errorHandling(error, res);
@@ -48,16 +52,49 @@ export default class AuthController {
 	 * Handles me request
 	 *
 	 * Inorder Flow:
-	 * - Return success response
+	 * - Retrieve access token from request
+	 * - Fetch user resource from resource server
+	 * - Structure success response with User resources
 	 */
-	me: RequestHandler = async (_req, res) => {
+	me: RequestHandler = async (req, res) => {
 		try {
+			const accessToken = strictCheck(req.accessToken, 500, "Access token is not found");
+
+			const user = await this.authService.fetchUserResource(accessToken);
+
 			res.status(200).json({
 				success: true,
 				message: "Authentication successful",
+				data: user,
 			});
 		} catch (error) {
 			errorHandling(error, res);
 		}
+	};
+
+	/**
+	 * Handles logout request
+	 * 
+	 * Inorder Flow:
+	 * - Retrieve session token from request
+	 * - Invalidate Session Token in db
+	 * - Clear session token cookie and send success response
+	 */
+	logout: RequestHandler = async (req, res) => {
+		try {
+			const token = strictCheck(req.cookies["sessionToken"] as string, 500, "Session token is not found");
+
+			await this.authService.logout(token);
+
+			res.clearCookie("sessionToken");
+			res.status(200).json({
+				success: true,
+				message: "Logout successful",
+			});
+
+		} catch (error) {
+			errorHandling(error, res);
+		}
+	
 	};
 }

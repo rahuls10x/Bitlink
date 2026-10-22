@@ -14,16 +14,20 @@ describe("AuthController", () => {
     beforeEach(() => {
         authService = {
             exchangeCode: vi.fn(),
+            fetchUserResource: vi.fn(),
+            logout: vi.fn(),
         } as unknown as Mocked<AuthService>;
 
         authController = new AuthController(authService);
 
         req = {
-            body: {}
+            body: {},
+            cookies: {},
         };
 
         res = {
             cookie: vi.fn(),
+            clearCookie: vi.fn(),
             status: vi.fn().mockReturnThis(),
             json: vi.fn(),
         };
@@ -36,13 +40,17 @@ describe("AuthController", () => {
                 code_verifier: "valid_verifier"
             };
 
-            const mockSessionId = "session_12345";
-            authService.exchangeCode.mockResolvedValue(mockSessionId);
+            const mockUserData = {
+                sessionId: "session_12345",
+                name: "Test User",
+                email: "test@example.com",
+            };
+            authService.exchangeCode.mockResolvedValue(mockUserData);
 
             await authController.exchangeToken(req as Request, res as Response, vi.fn());
 
             expect(authService.exchangeCode).toHaveBeenCalledWith("valid_code", "valid_verifier");
-            expect(res.cookie).toHaveBeenCalledWith("sessionToken", mockSessionId, {
+            expect(res.cookie).toHaveBeenCalledWith("sessionToken", mockUserData.sessionId, {
                 httpOnly: true,
                 secure: process.env["NODE_ENV"] === "production",
                 sameSite: "lax",
@@ -52,6 +60,10 @@ describe("AuthController", () => {
             expect(res.json).toHaveBeenCalledWith({
                 success: true,
                 message: "Authentication successful",
+                data: {
+                    name: mockUserData.name,
+                    email: mockUserData.email,
+                },
             });
         });
 
@@ -118,6 +130,76 @@ describe("AuthController", () => {
                 success: false,
                 error: "Unexpected error",
             });
+        });
+    });
+
+    describe("me", () => {
+        it("should return user info when accessToken is present", async () => {
+            (req as any).accessToken = "valid_access_token";
+
+            const mockUser = {
+                id: "user_123",
+                name: "Test User",
+                email: "test@example.com",
+            };
+
+            authService.fetchUserResource.mockResolvedValue(mockUser);
+
+            await authController.me(req as Request, res as Response, vi.fn());
+
+            expect(authService.fetchUserResource).toHaveBeenCalledWith("valid_access_token");
+            expect(res.status).toHaveBeenCalledWith(200);
+            expect(res.json).toHaveBeenCalledWith({
+                success: true,
+                message: "Authentication successful",
+                data: mockUser,
+            });
+        });
+
+        it("should fail when accessToken is missing", async () => {
+            (req as any).accessToken = undefined;
+
+            await authController.me(req as Request, res as Response, vi.fn());
+
+            expect(res.status).toHaveBeenCalledWith(500);
+            expect(res.json).toHaveBeenCalledWith({
+                success: false,
+                error: "Access token is not found",
+            });
+            expect(authService.fetchUserResource).not.toHaveBeenCalled();
+        });
+    });
+
+    describe("logout", () => {
+        it("should invalidate session, clear cookie, and return success", async () => {
+            req.cookies = {
+                sessionToken: "valid_session_token",
+            };
+
+            authService.logout.mockResolvedValue(undefined as any);
+
+            await authController.logout(req as Request, res as Response, vi.fn());
+
+            expect(authService.logout).toHaveBeenCalledWith("valid_session_token");
+            expect(res.clearCookie).toHaveBeenCalledWith("sessionToken");
+            expect(res.status).toHaveBeenCalledWith(200);
+            expect(res.json).toHaveBeenCalledWith({
+                success: true,
+                message: "Logout successful",
+            });
+        });
+
+        it("should fail when sessionToken cookie is missing", async () => {
+            req.cookies = {};
+
+            await authController.logout(req as Request, res as Response, vi.fn());
+
+            expect(res.status).toHaveBeenCalledWith(500);
+            expect(res.json).toHaveBeenCalledWith({
+                success: false,
+                error: "Session token is not found",
+            });
+            expect(authService.logout).not.toHaveBeenCalled();
         });
     });
 });

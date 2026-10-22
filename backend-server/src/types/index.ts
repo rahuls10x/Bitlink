@@ -7,6 +7,7 @@ declare global {
 			PORT?: string;
 			ORIGIN_URL?: string;
 			AUTH_SERVER_URL?: string;
+			RESOURCE_SERVER_URL?: string;
 			CLIENT_ID?: string;
 			CLIENT_SECRET?: string;
 			REDIRECT_URI?: string;
@@ -37,6 +38,11 @@ export interface AuthTokens {
 	expires_in: number;
 	refresh_token?: string;
 	scopes: string[];
+}
+
+export interface UserResource {
+	name:string;
+	email:string;
 }
 
 declare module "express-serve-static-core" {

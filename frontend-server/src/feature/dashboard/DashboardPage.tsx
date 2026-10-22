@@ -6,6 +6,7 @@ import { APP_NAME } from "@/lib/constants";
 import { APP_ROUTES } from "@/config/routes";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Spinner } from "@/components/ui/spinner";
 import { 
 	CheckCircle2, 
@@ -14,8 +15,8 @@ import {
 	Terminal, 
 	Layers, 
 	FolderGit2, 
-	ArrowRight,
-	Play
+	ArrowRight, 
+	Play 
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -26,6 +27,15 @@ export default function DashboardPage() {
 	const [apiError, setApiError] = useState<string | null>(null);
 
 	const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:4001";
+
+	const userInitials = user?.name
+		? user.name
+				.split(" ")
+				.map((n) => n[0])
+				.join("")
+				.toUpperCase()
+				.slice(0, 2)
+		: "AU";
 
 	const handleTestProtectedApi = async () => {
 		try {
@@ -111,10 +121,20 @@ export default function DashboardPage() {
 						<Key className="size-4 text-slate-600" />
 					</CardHeader>
 					<CardContent>
-						<div className="text-base font-semibold truncate text-slate-900">
-							{user?.name || "Authenticated User"}
+						<div className="flex items-center gap-2.5">
+							<Avatar className="size-8 rounded-lg shrink-0">
+								{user?.avatar && <AvatarImage src={user.avatar} alt={user.name || "User"} />}
+								<AvatarFallback className="rounded-lg bg-blue-100 text-blue-700 font-semibold text-xs">
+									{userInitials}
+								</AvatarFallback>
+							</Avatar>
+							<div className="min-w-0 flex-1">
+								<div className="text-sm font-semibold truncate text-slate-900">
+									{user?.name || "Authenticated User"}
+								</div>
+								<p className="text-xs text-slate-500 truncate">{user?.email || "user@example.com"}</p>
+							</div>
 						</div>
-						<p className="text-xs text-slate-500 mt-1 truncate">{user?.email || "user@example.com"}</p>
 					</CardContent>
 				</Card>
 
